@@ -1,5 +1,6 @@
 # Scanning for port 
 import socket
+import concurrent.futures
 
 def ip_ask():
     # input ip
@@ -21,14 +22,14 @@ def port_try():
 
 def open_close(ip_chosen, port_chosen):
     test_port = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
-    test_port.settimeout(1)
+    test_port.settimeout(0.5)
     test_port_result = test_port.connect_ex((ip_chosen, port_chosen))
     if test_port_result == 0:
         print(f'Port {port_chosen} is open')
         test_port.close()
         return 0
     else:
-        # print(f'Port {port_chosen} is closed') # Commented out to avoid spamming the console
+        #print(f'Port {port_chosen} is closed') # Commented out to avoid spamming the console
         test_port.close() 
         return 1
 
@@ -43,14 +44,20 @@ def main():
     print(f'You chose to scan the ip address : {target_address}')
 
     if target_port == '':
+        with concurrent.futures.ThreadPoolExecutor(max_workers=250) as executor:
+            liste_tickets = []
+            for port in range(1, 1025):
+                futures = [executor.submit(open_close, target_address, port)]
+                liste_tickets.append(futures)
+            for i in liste_tickets:
+                for f in concurrent.futures.as_completed(i):
+                    resultat = f.result()
+                    if resultat == 0:
+                        ouvert += 1
+                    else:
+                        ferme += 1
         print('You chose not to put any port')
         print('The scan of all ports has begun')
-        for port in range(1, 1025):
-            resultat = open_close(target_address, port)
-            if resultat == 0:
-                ouvert += 1
-            else:
-                ferme += 1
 
     else:
         print(f'You chose to scan the port : {target_port}')
